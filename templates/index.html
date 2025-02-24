@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nano RAG</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 200px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            padding: 20px 0;
+        }
+        .nav-item {
+            padding: 15px 25px;
+            cursor: pointer;
+            color: #495057;
+            text-decoration: none;
+            display: block;
+        }
+        .nav-item:hover {
+            background-color: #e9ecef;
+        }
+        .nav-item.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .content {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="nav-item {% if active_page == 'chat' %}active{% endif %}" data-page="chat">对话</div>
+        <div class="nav-item {% if active_page == 'knowledge' %}active{% endif %}" data-page="knowledge">知识库</div>
+    </div>
+    <div class="content">
+        <iframe id="content-frame" src="{{ content_url }}" frameborder="0"></iframe>
+    </div>
+
+    <script>
+        const contentFrame = document.getElementById('content-frame');
+
+        // 处理导航点击
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                // 移除所有active类
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                // 添加active类到当前点击项
+                e.target.classList.add('active');
+                
+                // 更新iframe内容
+                const page = e.target.dataset.page;
+                contentFrame.src = `/${page}`;
+            });
+        });
+    </script>
+</body>
+</html> 

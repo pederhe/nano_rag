@@ -1,0 +1,12 @@
+flask
+flask-wtf
+langchain
+langchain-community
+langchain-core
+langchain-huggingface
+langchain-ollama
+chromadb
+PyPDF2
+python-docx
+sqlalchemy
+requests 

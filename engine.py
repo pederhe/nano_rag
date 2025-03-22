@@ -13,13 +13,13 @@ from config import (
 )
 
 def format_chat_history(history):
-    """将聊天历史格式化为提示词"""
+    """Format chat history into prompt"""
     formatted_history = []
     for msg in history:
-        role = "用户" if msg["role"] == "user" else "助手"
+        role = "User" if msg["role"] == "user" else "Assistant"
         content = msg["content"]
         
-        # 如果不是用户消息，移除<think></think>标签内的思考内容，否则上下文太长了
+        # If not a user message, remove thinking content in <think></think> tags to reduce context length
         if msg["role"] != "user":
             content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
             
@@ -44,16 +44,16 @@ def query_ollama(prompt, callback=None, chat_history=None):
     else:
         callbacks.append(StreamingStdOutCallbackHandler())
     
-    # 构建完整提示词
+    # Build complete prompt
     if chat_history:
-        history_text = format_chat_history(chat_history[:-1])  # 不包括最新的用户消息
-        system_prompt = f"""你是一个智能助手。以下是之前的对话历史：
+        history_text = format_chat_history(chat_history[:-1])  # Excluding the latest user message
+        system_prompt = f"""You are an intelligent assistant. Here is the previous conversation history:
 
 {history_text}
 
-请基于以上对话历史回答用户的问题。
+Please answer the user's question based on the above conversation history.
 """
-        full_prompt = f"{system_prompt}\n\n用户的问题是：\n\n{prompt}\n"
+        full_prompt = f"{system_prompt}\n\nUser's question is:\n\n{prompt}\n"
     else:
         full_prompt = prompt
         
@@ -69,10 +69,10 @@ def query_vllm(message, callback=None, chat_history=None):
     """Query using vLLM"""
     headers = {"Content-Type": "application/json"}
     
-    # 构建消息历史
+    # Build message history
     messages = []
     if chat_history:
-        for msg in chat_history[:-1]:  # 不包括最新的用户消息
+        for msg in chat_history[:-1]:  # Excluding the latest user message
             messages.append({
                 "role": msg["role"],
                 "content": msg["content"]

@@ -22,42 +22,42 @@ chroma_client = chromadb.PersistentClient(path=os.path.join(os.getcwd(), "chroma
 
 def check_embedding_consistency():
     """
-    检查ChromaDB中的collection使用的embedding类型是否与配置一致
+    Check if the embedding type used in ChromaDB collection is consistent with configuration
     """
     try:
-        # 获取所有collection名称
+        # Get all collection names
         collection_names = chroma_client.list_collections()
         
-        # 检查目标collection是否存在
+        # Check if target collection exists
         if collection_name in collection_names:
-            # 使用get_collection获取collection详情
+            # Get collection details using get_collection
             col = chroma_client.get_collection(name=collection_name)
             metadata = col.metadata
             if metadata and "embedding_type" in metadata:
                 stored_type = metadata["embedding_type"]
                 if stored_type != EMBEDDING_TYPE:
                     print(f"""
-错误: Embedding类型不匹配!
-配置的类型: {EMBEDDING_TYPE}
-数据库使用的类型: {stored_type}
+Error: Embedding type mismatch!
+Configured type: {EMBEDDING_TYPE}
+Type used in database: {stored_type}
 
-请执行以下操作之一:
-1. 修改配置文件中的EMBEDDING_TYPE为"{stored_type}"
-2. 删除ChromaDB数据目录并重新创建 (将丢失所有数据)
-3. 使用新的collection名称
+Please do one of the following:
+1. Change EMBEDDING_TYPE in config file to "{stored_type}"
+2. Delete ChromaDB data directory and recreate (will lose all data)
+3. Use a new collection name
 """)
                     sys.exit(1)
     except Exception as e:
-        print(f"检查Embedding一致性时发生错误: {str(e)}")
+        print(f"Error checking embedding consistency: {str(e)}")
         sys.exit(1)
 
 def check_huggingface_token():
-    """检查使用 nomic 时是否设置了 Hugging Face token"""
+    """Check if Hugging Face token is set when using nomic"""
     if EMBEDDING_TYPE == "nomic" and not os.getenv('HUGGINGFACEHUB_API_TOKEN'):
         print("""
-错误: 使用 nomic embedding 需要设置 HUGGINGFACEHUB_API_TOKEN 环境变量
+Error: Using nomic embedding requires setting HUGGINGFACEHUB_API_TOKEN environment variable
 
-请设置环境变量后重试:
+Please set the environment variable and try again:
 Linux/Mac: export HUGGINGFACEHUB_API_TOKEN="your_token_here"
 Windows: set HUGGINGFACEHUB_API_TOKEN=your_token_here
 """)
@@ -73,7 +73,7 @@ class ChromaDBEmbeddingFunction:
             self.embeddings = HuggingFaceEmbeddings(
                 model_name="nomic-ai/nomic-embed-text-v2-moe",
                 encode_kwargs={'normalize_embeddings': True},
-                model_kwargs={'trust_remote_code': True}  # 添加此参数以信任远程代码
+                model_kwargs={'trust_remote_code': True}  # Add this parameter to trust remote code
             )
         else:  # default to ollama
             self.embeddings = OllamaEmbeddings(
@@ -92,7 +92,7 @@ class ChromaDBEmbeddingFunction:
             print(f"Embedding error: {str(e)}")
             raise
 
-# 在初始化 embedding 前检查
+# Check before initializing embedding
 check_huggingface_token()
 embedding = ChromaDBEmbeddingFunction()
 
@@ -162,7 +162,7 @@ def generate_summary(content):
     Returns:
         str: Generated summary
     """
-    prompt = f"请用一句话总结主要内容(单一语言,最多200个字):\n\n{content[:10000]}"
+    prompt = f"Please summarize the main content in one sentence (single language, maximum 200 characters):\n\n{content[:10000]}"
     # Create a queue to receive responses
     queue = Queue()
     summary = ""
@@ -205,33 +205,33 @@ def rag_pipeline(query_text, callback=None, chat_history=None):
     """
     # Step 1: Retrieve relevant documents from ChromaDB
     retrieved_docs, metadata = query_chromadb(query_text)
-    context = "\n---\n".join(["\n".join(docs) for docs in retrieved_docs]) if retrieved_docs else "没有相关内容"
+    context = "\n---\n".join(["\n".join(docs) for docs in retrieved_docs]) if retrieved_docs else "No relevant content"
 
-    # Step 2: 构建包含上下文和聊天历史的完整提示词
+    # Step 2: Build complete prompt with context and chat history
     if len(chat_history) > 0:
         history_text = format_chat_history(chat_history[:-1])
-        system_prompt = f"""你是一个专业的知识库助手，需要严格按照以下规则回答问题：
-1. 仅基于用户提供的知识库内容（以下用[知识库]代指）回答问题，禁止编造信息。
-2. 如果问题超出[知识库]范围，直接回答"根据现有资料，暂未找到相关信息"，不要加入其他内容。
-3. 回答需简洁、准确，并引用[知识库]中的文件名或段落编号。
-4. 如果用户的问题模糊，请先请求澄清具体需求。
+        system_prompt = f"""You are a professional knowledge base assistant who must strictly follow these rules when answering questions:
+1. Answer questions based ONLY on the provided knowledge base content (referred to as [Knowledge Base]), do not fabricate information.
+2. If the question is outside the scope of the [Knowledge Base], directly respond with "Based on available information, no relevant data was found" without adding anything else.
+3. Answers should be concise, accurate, and reference file names or paragraph numbers from the [Knowledge Base].
+4. If the user's question is ambiguous, first request clarification of specific requirements.
 
-[知识库]内容：
+[Knowledge Base] content:
 {context}
 
-对话历史：
+Conversation history:
 {history_text}"""
-        augmented_prompt = f"{system_prompt}\n\n问题：\n\n{query_text}\n"
+        augmented_prompt = f"{system_prompt}\n\nQuestion:\n\n{query_text}\n"
     else:
-        system_prompt = f"""你是一个专业的知识库助手，需要严格按照以下规则回答问题：
-1. 仅基于用户提供的知识库内容（以下用[知识库]代指）回答问题，禁止编造信息。
-2. 如果问题超出[知识库]范围，直接回答"根据现有资料，暂未找到相关信息"，不要加入其他内容。
-3. 回答需简洁、准确，并引用[知识库]中的文件名或段落编号。
-4. 如果用户的问题模糊，请先请求澄清具体需求。
+        system_prompt = f"""You are a professional knowledge base assistant who must strictly follow these rules when answering questions:
+1. Answer questions based ONLY on the provided knowledge base content (referred to as [Knowledge Base]), do not fabricate information.
+2. If the question is outside the scope of the [Knowledge Base], directly respond with "Based on available information, no relevant data was found" without adding anything else.
+3. Answers should be concise, accurate, and reference file names or paragraph numbers from the [Knowledge Base].
+4. If the user's question is ambiguous, first request clarification of specific requirements.
 
-[知识库]内容：
+[Knowledge Base] content:
 {context}"""
-        augmented_prompt = f"{system_prompt}\n\n问题：\n\n{query_text}\n"
+        augmented_prompt = f"{system_prompt}\n\nQuestion:\n\n{query_text}\n"
 
     
     if os.getenv('DEBUG'):

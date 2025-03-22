@@ -20,24 +20,24 @@ csrf = CSRFProtect(app)  # Add CSRF protection
 
 doc_processor = DocumentProcessor()
 
-# 用于存储聊天记录的全局字典
+# Global dictionary to store chat histories
 chat_histories = {}
 
 def get_history():
-    # 使用 csrf_token 作为会话标识
+    # Use csrf_token as session identifier
     session_id = session.get('csrf_token')
     if not session_id:
         session_id = secrets.token_hex(16)
         session['csrf_token'] = session_id
     
-    # 如果是新会话，初始化聊天记录
+    # Initialize chat history for new sessions
     if session_id not in chat_histories:
         chat_histories[session_id] = []
     
     return chat_histories[session_id]
 
 def format_think_content(content):
-    """将<think></think>标签转换为思考区域的HTML"""
+    """Convert <think></think> tags to HTML think area"""
     if '<think>' not in content:
         return content
     
@@ -47,17 +47,17 @@ def format_think_content(content):
     for part in parts[1:]:
         if '</think>' in part:
             think_parts = part.split('</think>')
-            # 提取思考时间
+            # Extract thinking time
             think_content = think_parts[0]
-            time_match = re.search(r'用时(\d+)秒$', think_content)
+            time_match = re.search(r'took (\d+) seconds$', think_content)
             if time_match:
-                think_time = f'(用时{time_match.group(1)}秒)'
-                # 移除内容中的时间信息
+                think_time = f'(took {time_match.group(1)} seconds)'
+                # Remove time information from content
                 think_content = think_content[:-(len(time_match.group(0)))]
             else:
                 think_time = ''
             
-            result += f'<div class="think-content"><div class="think-header">已深度思考{think_time}</div><div class="think-body">{think_content}</div></div>'
+            result += f'<div class="think-content"><div class="think-header">Deep thinking completed {think_time}</div><div class="think-body">{think_content}</div></div>'
             if len(think_parts) > 1:
                 result += think_parts[1]
     
@@ -76,21 +76,21 @@ class StreamingCallback(BaseCallbackHandler):
             self.has_think_start = True
             self.think_start_time = time.time()
         elif "</think>" in token and self.has_think_start:
-            # 计算思考时间
+            # Calculate thinking time
             think_time = int(time.time() - self.think_start_time)
-            # 在结束标签前插入时间信息
-            token = f'用时{think_time}秒</think>'
+            # Insert time information before closing tag
+            token = f'took {think_time} seconds</think>'
             self.think_start_time = None
         self.queue.put(token)
         
     def on_llm_end(self, *args, **kwargs):
-        # 如果有开始标签但没有结束标签，添加结束标签
+        # If there's an opening tag but no closing tag, add closing tag
         if self.has_think_start and "</think>" not in self.response_text:
             self.queue.put("</think>")
         self.queue.put(None)
         
     def on_llm_error(self, *args, **kwargs):
-        # 如果有开始标签但没有结束标签，添加结束标签
+        # If there's an opening tag but no closing tag, add closing tag
         if self.has_think_start and "</think>" not in self.response_text:
             self.queue.put("</think>")
         self.queue.put(None)
@@ -109,10 +109,10 @@ def chat():
         chat_history.append(
             {
                 "role": "assistant",
-                "content": "Hi~ 我是拾一 你身边的智能助手"
+                "content": "Hi~ I'm Shiyi, your intelligent assistant"
             }
         )
-    # 处理历史消息中的think标签
+    # Process think tags in historical messages
     for message in chat_history:
         if message['role'] == 'assistant':
             message['content'] = format_think_content(message['content'])
@@ -124,7 +124,7 @@ def query():
     user_message = request.json.get('message', '')
     use_rag = request.json.get('use_rag', False)
     
-    # 获取当前会话的聊天记录
+    # Get chat history for current session
     chat_history = get_history()
     if user_message:
         chat_history.append({"role": "user", "content": user_message})

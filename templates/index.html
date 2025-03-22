@@ -44,8 +44,8 @@
 </head>
 <body>
     <div class="sidebar">
-        <div class="nav-item {% if active_page == 'chat' %}active{% endif %}" data-page="chat">对话</div>
-        <div class="nav-item {% if active_page == 'knowledge' %}active{% endif %}" data-page="knowledge">知识库</div>
+        <div class="nav-item {% if active_page == 'chat' %}active{% endif %}" data-page="chat">Chat</div>
+        <div class="nav-item {% if active_page == 'knowledge' %}active{% endif %}" data-page="knowledge">Knowledge Base</div>
     </div>
     <div class="content">
         <iframe id="content-frame" src="{{ content_url }}" frameborder="0"></iframe>
@@ -54,15 +54,15 @@
     <script>
         const contentFrame = document.getElementById('content-frame');
 
-        // 处理导航点击
+        // Handle navigation clicks
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
-                // 移除所有active类
+                // Remove all active classes
                 document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                // 添加active类到当前点击项
+                // Add active class to current clicked item
                 e.target.classList.add('active');
                 
-                // 更新iframe内容
+                // Update iframe content
                 const page = e.target.dataset.page;
                 contentFrame.src = `/${page}`;
             });

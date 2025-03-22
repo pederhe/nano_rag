@@ -21,5 +21,5 @@ class DocumentMeta(Base):
     summary = Column(String(512))
     created_at = Column(DateTime, default=datetime.now)
 
-# 创建数据库表
+# Create database tables
 Base.metadata.create_all(engine) 

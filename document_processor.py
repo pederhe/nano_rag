@@ -25,7 +25,7 @@ class DocumentProcessor:
         self.session.add(doc)
         self.session.flush()
         
-        # 保存元信息
+        # Save metadata
         meta = DocumentMeta(
             id=doc.id,
             title=title,
@@ -34,7 +34,7 @@ class DocumentProcessor:
         self.session.add(meta)
         self.session.commit()
         
-        # 添加到 ChromaDB
+        # Add to ChromaDB
         add_documents_to_collection(
             documents=[content],
             ids=[f"doc_{doc.id}"]
@@ -71,12 +71,12 @@ class DocumentProcessor:
         Args:
             doc_id: Document ID
         """
-        # 从 ChromaDB 中删除文档
+        # Delete document from ChromaDB
         from rag import collection
         try:
             collection.delete(ids=[f"doc_{doc_id}"])
         except:
-            pass  # 如果文档不存在于 ChromaDB 中，忽略错误
+            pass  # Ignore error if document doesn't exist in ChromaDB
         
         self.session.query(Document).filter_by(id=doc_id).delete()
         self.session.query(DocumentMeta).filter_by(id=doc_id).delete()

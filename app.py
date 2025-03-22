@@ -138,7 +138,7 @@ def query():
             if use_rag:
                 rag_pipeline(user_message, callback, chat_history)
             else:
-                query_llm(user_message, callback, chat_history)
+                query_llm("You are an intelligent assistant.", user_message, callback, chat_history)
         
         Thread(target=process_query).start()
         

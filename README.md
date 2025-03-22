@@ -1,4 +1,4 @@
-# A Simple and Usable RAG Project
+# A Simple RAG Project
 
 ## Core Features
 

@@ -26,12 +26,13 @@ def format_chat_history(history):
         formatted_history.append(f"{role}: {content}")
     return "\n".join(formatted_history)
 
-def query_ollama(prompt, callback=None, chat_history=None):
+def query_ollama(system_prompt, message, callback=None, chat_history=None):
     """
     Send a query to Ollama and retrieve the response.
     
     Args:
-        prompt (str): The input prompt for Ollama.
+        system_prompt (str): The system prompt for Ollama.
+        message (str): The input message for Ollama.
         callback (function): Optional callback function for streaming output
         chat_history (list): Optional chat history
     
@@ -47,15 +48,14 @@ def query_ollama(prompt, callback=None, chat_history=None):
     # Build complete prompt
     if chat_history:
         history_text = format_chat_history(chat_history[:-1])  # Excluding the latest user message
-        system_prompt = f"""You are an intelligent assistant. Here is the previous conversation history:
+        full_prompt = f"""{system_prompt}\n\nHere is the previous conversation history:
 
 {history_text}
 
-Please answer the user's question based on the above conversation history.
+Please answer the user's question based on the above conversation history.\n\nUser's question is:\n\n{message}\n
 """
-        full_prompt = f"{system_prompt}\n\nUser's question is:\n\n{prompt}\n"
     else:
-        full_prompt = prompt
+        full_prompt = f"{system_prompt}\n\n{message}\n"
         
     llm = OllamaLLM(
         model=OLLAMA_MODEL,
@@ -65,17 +65,20 @@ Please answer the user's question based on the above conversation history.
     )
     return llm.invoke(full_prompt)
 
-def query_vllm(message, callback=None, chat_history=None):
+def query_vllm(system_prompt, message, callback=None, chat_history=None):
     """Query using vLLM"""
     headers = {"Content-Type": "application/json"}
     
     # Build message history
     messages = []
+    messages.append({"role": "system", "content": system_prompt})
     if chat_history:
         for msg in chat_history[:-1]:  # Excluding the latest user message
+            if msg["role"] != "user":
+                content = re.sub(r'<think>.*?</think>', '', msg["content"], flags=re.DOTALL)
             messages.append({
                 "role": msg["role"],
-                "content": msg["content"]
+                "content": content
             })
     messages.append({"role": "user", "content": message})
     
@@ -108,9 +111,9 @@ def query_vllm(message, callback=None, chat_history=None):
     if callback:
         callback.on_llm_end()
 
-def query_llm(message, callback=None, chat_history=None):
+def query_llm(system_prompt, message, callback=None, chat_history=None):
     """Select query engine based on configuration"""
     if QUERY_ENGINE == "vllm":
-        return query_vllm(message, callback, chat_history)
+        return query_vllm(system_prompt, message, callback, chat_history)
     else:
-        return query_ollama(message, callback, chat_history) 
+        return query_ollama(system_prompt, message, callback, chat_history) 

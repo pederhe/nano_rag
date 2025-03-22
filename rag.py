@@ -180,7 +180,7 @@ def generate_summary(content):
     callback = SummaryCallback(queue)
     
     # Run query in a new thread
-    Thread(target=lambda: query_llm(prompt, callback)).start()
+    Thread(target=lambda: query_llm("You are a document summary expert.", prompt, callback)).start()
     
     # Collect response
     while True:
@@ -203,27 +203,12 @@ def rag_pipeline(query_text, callback=None, chat_history=None):
         callback (function): Optional callback function for streaming output
         chat_history (list): Optional chat history
     """
-    # Step 1: Retrieve relevant documents from ChromaDB
+    # Retrieve relevant documents from ChromaDB
     retrieved_docs, metadata = query_chromadb(query_text)
     context = "\n---\n".join(["\n".join(docs) for docs in retrieved_docs]) if retrieved_docs else "No relevant content"
 
-    # Step 2: Build complete prompt with context and chat history
-    if len(chat_history) > 0:
-        history_text = format_chat_history(chat_history[:-1])
-        system_prompt = f"""You are a professional knowledge base assistant who must strictly follow these rules when answering questions:
-1. Answer questions based ONLY on the provided knowledge base content (referred to as [Knowledge Base]), do not fabricate information.
-2. If the question is outside the scope of the [Knowledge Base], directly respond with "Based on available information, no relevant data was found" without adding anything else.
-3. Answers should be concise, accurate, and reference file names or paragraph numbers from the [Knowledge Base].
-4. If the user's question is ambiguous, first request clarification of specific requirements.
-
-[Knowledge Base] content:
-{context}
-
-Conversation history:
-{history_text}"""
-        augmented_prompt = f"{system_prompt}\n\nQuestion:\n\n{query_text}\n"
-    else:
-        system_prompt = f"""You are a professional knowledge base assistant who must strictly follow these rules when answering questions:
+    # Build system prompt with context
+    system_prompt = f"""You are a professional knowledge base assistant who must strictly follow these rules when answering questions:
 1. Answer questions based ONLY on the provided knowledge base content (referred to as [Knowledge Base]), do not fabricate information.
 2. If the question is outside the scope of the [Knowledge Base], directly respond with "Based on available information, no relevant data was found" without adding anything else.
 3. Answers should be concise, accurate, and reference file names or paragraph numbers from the [Knowledge Base].
@@ -231,12 +216,5 @@ Conversation history:
 
 [Knowledge Base] content:
 {context}"""
-        augmented_prompt = f"{system_prompt}\n\nQuestion:\n\n{query_text}\n"
-
     
-    if os.getenv('DEBUG'):
-        print("\n=== Debug: Full Prompt ===")
-        print(augmented_prompt)
-        print("=========================\n")
-    
-    return query_llm(augmented_prompt, callback)
+    return query_llm(system_prompt, query_text, callback, chat_history)
